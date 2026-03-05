@@ -81,16 +81,20 @@ class RSSSource(DataSource):
                 if self.storage.is_news_processed(entry.link):
                     continue
 
-                news_item = NewsItem(
-                    title=entry.get("title", ""),
-                    content=entry.get("summary", entry.get("description", "")),
-                    url=entry.get("link", ""),
-                    published=entry.get("published", ""),
-                    source=self.name,
-                )
-                news_items.append(news_item)
-                # Mark as processed immediately after adding
-                self.storage.mark_news_processed(entry.link)
+                try:
+                    news_item = NewsItem(
+                        title=entry.get("title", ""),
+                        content=entry.get("summary", entry.get("description", "")),
+                        url=entry.get("link", ""),
+                        published=entry.get("published", ""),
+                        source=self.name,
+                    )
+                    news_items.append(news_item)
+                    # Mark as processed immediately after adding
+                    self.storage.mark_news_processed(entry.get("title", ""), entry.link)
+                except ValueError as e:
+                    logger.warning(f"Skipping invalid news item from {self.name}: {e}")
+                    continue
 
             logger.info(f"Fetched {len(news_items)} new items from {self.name}")
             self._update_status(True)
