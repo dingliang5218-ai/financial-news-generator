@@ -65,6 +65,57 @@ class Storage:
                     )
                 """)
 
+                # News events table
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS news_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        event_id TEXT UNIQUE NOT NULL,
+                        main_title TEXT NOT NULL,
+                        event_summary TEXT,
+                        source_count INTEGER,
+                        earliest_time TIMESTAMP,
+                        importance INTEGER,
+                        hotness INTEGER,
+                        timeliness REAL,
+                        total_score REAL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                # Event-news mapping table
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS event_news_mapping (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        event_id TEXT NOT NULL,
+                        news_url TEXT NOT NULL,
+                        FOREIGN KEY (event_id) REFERENCES news_events(event_id)
+                    )
+                ''')
+
+                # Impact analysis table
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS impact_analysis (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        event_id TEXT NOT NULL,
+                        dimension TEXT NOT NULL,
+                        impact_level TEXT,
+                        explanation TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (event_id) REFERENCES news_events(event_id)
+                    )
+                ''')
+
+                # Add new columns to articles table if they don't exist
+                try:
+                    cursor.execute('ALTER TABLE articles ADD COLUMN article_type TEXT')
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+
+                try:
+                    cursor.execute('ALTER TABLE articles ADD COLUMN event_id TEXT')
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+
                 conn.commit()
                 logger.info("Database initialized successfully")
         except sqlite3.Error as e:
