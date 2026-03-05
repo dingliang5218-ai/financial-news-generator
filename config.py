@@ -42,6 +42,35 @@ class Config:
     BACKUP_DIR = "data/backups"
     DB_PATH = "data/articles.db"
 
+    # Aggregation configuration
+    AGGREGATION_ENABLED = os.getenv("AGGREGATION_ENABLED", "true").lower() == "true"
+    MIN_SIMILARITY_SCORE = float(os.getenv("MIN_SIMILARITY_SCORE", "0.7"))
+
+    # Ranking configuration
+    IMPORTANCE_WEIGHT = float(os.getenv("IMPORTANCE_WEIGHT", "0.6"))
+    HOTNESS_WEIGHT = float(os.getenv("HOTNESS_WEIGHT", "0.3"))
+    TIMELINESS_WEIGHT = float(os.getenv("TIMELINESS_WEIGHT", "0.1"))
+    TOP_N_NEWS = int(os.getenv("TOP_N_NEWS", "3"))
+
+    # Impact analysis configuration
+    IMPACT_DIMENSIONS = [
+        'global_economy',
+        'us_economy',
+        'china_economy',
+        'us_stock',
+        'china_stock',
+        'other_markets'
+    ]
+
+    # Content generation configuration
+    DAILY_SUMMARY_ENABLED = os.getenv("DAILY_SUMMARY_ENABLED", "true").lower() == "true"
+    DAILY_SUMMARY_MIN_LENGTH = int(os.getenv("DAILY_SUMMARY_MIN_LENGTH", "1500"))
+    DAILY_SUMMARY_MAX_LENGTH = int(os.getenv("DAILY_SUMMARY_MAX_LENGTH", "2000"))
+
+    DEEP_ANALYSIS_ENABLED = os.getenv("DEEP_ANALYSIS_ENABLED", "true").lower() == "true"
+    DEEP_ANALYSIS_IMPORTANCE_THRESHOLD = int(os.getenv("DEEP_ANALYSIS_IMPORTANCE_THRESHOLD", "4"))
+    DEEP_ANALYSIS_HOTNESS_THRESHOLD = int(os.getenv("DEEP_ANALYSIS_HOTNESS_THRESHOLD", "3"))
+
     @classmethod
     def validate(cls):
         """Validate required configuration"""
