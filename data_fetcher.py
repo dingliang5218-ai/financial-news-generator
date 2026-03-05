@@ -78,7 +78,7 @@ class RSSSource(DataSource):
             news_items = []
             for entry in feed.entries[:Config.MAX_NEWS_PER_SOURCE]:
                 # Skip if already processed
-                if self.storage.is_news_processed(entry.link):
+                if self.storage.is_news_processed(entry.get("link", "")):
                     continue
 
                 try:
@@ -91,7 +91,7 @@ class RSSSource(DataSource):
                     )
                     news_items.append(news_item)
                     # Mark as processed immediately after adding
-                    self.storage.mark_news_processed(entry.get("title", ""), entry.link)
+                    self.storage.mark_news_processed(entry.get("title", ""), entry.get("link", ""))
                 except ValueError as e:
                     logger.warning(f"Skipping invalid news item from {self.name}: {e}")
                     continue
