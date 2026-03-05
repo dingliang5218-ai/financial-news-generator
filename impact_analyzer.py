@@ -6,7 +6,7 @@ from logger import Logger
 from error_handler import retry_with_backoff, RetryableError, DegradableError
 from models import NewsEvent, ImpactAnalysis
 
-logger = Logger.get_logger("impact_analyzer")
+logger = Logger.get_logger('impact_analyzer')
 
 
 class ImpactAnalyzer:
@@ -88,7 +88,7 @@ class ImpactAnalyzer:
                 model=self.model,
                 max_tokens=1500,
                 timeout=30.0,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": prompt}]
             )
 
             # Parse response
@@ -105,12 +105,8 @@ class ImpactAnalyzer:
 
             # Validate structure
             required_dimensions = [
-                "global_economy",
-                "us_economy",
-                "china_economy",
-                "us_stock",
-                "china_stock",
-                "other_markets",
+                "global_economy", "us_economy", "china_economy",
+                "us_stock", "china_stock", "other_markets"
             ]
             for dim in required_dimensions:
                 if dim not in analysis_data:
