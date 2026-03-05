@@ -77,7 +77,8 @@ class HealthCheck:
             stat = shutil.disk_usage(Config.DATA_DIR)
             free_mb = stat.free / (1024 * 1024)
             if free_mb < 100:
-                logger.warning(f"Low disk space: {free_mb:.1f}MB free")
+                logger.error(f"Insufficient disk space: {free_mb:.1f}MB free (minimum 100MB required)")
+                return False
 
             logger.info(f"✓ Storage check passed ({free_mb:.1f}MB free)")
             return True
