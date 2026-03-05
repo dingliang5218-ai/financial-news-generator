@@ -196,7 +196,20 @@ class Storage:
             logger.error(f"Failed to get active sources: {e}")
             return []
 
-    def get_articles(self, limit: int = 10) -> List[Dict]:
+    def get_article(self, article_id: int) -> Optional[Dict]:
+        """Get article by ID"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM articles WHERE id = ?", (article_id,))
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        except sqlite3.Error as e:
+            logger.error(f"Failed to get article: {e}")
+            return None
+
+    def get_recent_articles(self, limit: int = 10) -> List[Dict]:
         """Get recent articles"""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -213,4 +226,43 @@ class Storage:
                 return [dict(row) for row in cursor.fetchall()]
         except sqlite3.Error as e:
             logger.error(f"Failed to get articles: {e}")
+            return []
+
+    def search_articles(self, query: str) -> List[Dict]:
+        """Search articles by title or content"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT * FROM articles
+                    WHERE title LIKE ? OR content LIKE ?
+                    ORDER BY created_at DESC
+                    LIMIT 50
+                """,
+                    (f"%{query}%", f"%{query}%"),
+                )
+                return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            logger.error(f"Failed to search articles: {e}")
+            return []
+
+    def get_articles_by_date_range(self, days: int = 7) -> List[Dict]:
+        """Get articles from the last N days"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT * FROM articles
+                    WHERE created_at >= datetime('now', '-' || ? || ' days')
+                    ORDER BY created_at DESC
+                """,
+                    (days,),
+                )
+                return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            logger.error(f"Failed to get articles by date range: {e}")
             return []

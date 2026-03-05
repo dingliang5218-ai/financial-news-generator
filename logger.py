@@ -23,15 +23,15 @@ class Logger:
         Path(Config.LOGS_DIR).mkdir(parents=True, exist_ok=True)
 
         # Main log file
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = datetime.now().strftime("%Y%m%d")
         main_handler = logging.FileHandler(
-            f"{Config.LOGS_DIR}/financial-news-{today}.log", encoding="utf-8"
+            f"{Config.LOGS_DIR}/app_{today}.log", encoding="utf-8"
         )
         main_handler.setLevel(logging.DEBUG)
 
         # Error log file
         error_handler = logging.FileHandler(
-            f"{Config.LOGS_DIR}/errors-{today}.log", encoding="utf-8"
+            f"{Config.LOGS_DIR}/errors_{today}.log", encoding="utf-8"
         )
         error_handler.setLevel(logging.ERROR)
 

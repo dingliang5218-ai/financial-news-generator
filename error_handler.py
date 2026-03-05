@@ -69,30 +69,45 @@ def retry_with_backoff(max_retries=None, base_delay=None):
     return decorator
 
 
-def handle_errors(error_type=ErrorType.RECOVERABLE):
-    """Decorator for error handling"""
+def handle_errors(max_retries=None, retry_delay=None, error_type=ErrorType.RECOVERABLE):
+    """Decorator for error handling with retry support"""
+    if max_retries is None:
+        max_retries = Config.MAX_RETRIES
+    if retry_delay is None:
+        retry_delay = Config.RETRY_DELAY_BASE
 
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except RetryableError as e:
-                logger.warning(f"Recoverable error in {func.__name__}: {e}")
-                if error_type == ErrorType.RECOVERABLE:
-                    return None
-                raise
-            except DegradableError as e:
-                logger.error(f"Degradable error in {func.__name__}: {e}")
-                if error_type == ErrorType.DEGRADABLE:
-                    return None
-                raise
-            except FatalError as e:
-                logger.critical(f"Fatal error in {func.__name__}: {e}")
-                raise
-            except Exception as e:
-                logger.error(f"Unexpected error in {func.__name__}: {e}", exc_info=True)
-                raise
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except RetryableError as e:
+                    if attempt == max_retries:
+                        logger.error(
+                            f"{func.__name__} failed after {max_retries} retries: {e}"
+                        )
+                        if error_type == ErrorType.RECOVERABLE:
+                            return None
+                        raise
+
+                    delay = retry_delay * (2**attempt)
+                    logger.warning(
+                        f"{func.__name__} failed (attempt {attempt + 1}/{max_retries + 1}), "
+                        f"retrying in {delay}s: {e}"
+                    )
+                    time.sleep(delay)
+                except DegradableError as e:
+                    logger.error(f"Degradable error in {func.__name__}: {e}")
+                    if error_type == ErrorType.DEGRADABLE:
+                        return None
+                    raise
+                except FatalError as e:
+                    logger.critical(f"Fatal error in {func.__name__}: {e}")
+                    raise
+                except Exception as e:
+                    logger.error(f"Unexpected error in {func.__name__}: {e}", exc_info=True)
+                    raise
 
         return wrapper
 

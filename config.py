@@ -8,6 +8,9 @@ load_dotenv()
 class Config:
     """Application configuration"""
 
+    # Version
+    VERSION = "1.0.0"
+
     # Claude API
     CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
 
