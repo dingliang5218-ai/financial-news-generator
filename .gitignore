@@ -23,11 +23,18 @@ wheels/
 .installed.cfg
 *.egg
 
+# Environment variables
+.env
+
 # Database
 *.db
 *.sqlite
 *.sqlite3
 data/
+
+# Logs
+logs/
+*.log
 
 # IDE
 .vscode/
@@ -35,13 +42,6 @@ data/
 *.swp
 *.swo
 *~
-
-# Environment variables
-.env
-.env.local
-
-# Logs
-*.log
 
 # OS
 .DS_Store
@@ -51,7 +51,7 @@ Thumbs.db
 *.tmp
 *.bak
 
-# Images (参考资料)
+# Images (reference materials)
 *.jpg
 *.png
 *.jpeg
