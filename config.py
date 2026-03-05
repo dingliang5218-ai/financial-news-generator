@@ -13,6 +13,7 @@ class Config:
 
     # RSS Feeds
     RSS_FEEDS = [feed.strip() for feed in os.getenv("RSS_FEEDS", "").split(",") if feed.strip()]
+    MAX_NEWS_PER_SOURCE = int(os.getenv("MAX_NEWS_PER_SOURCE") or "20")
 
     # Generation Parameters
     IMPORTANCE_THRESHOLD = int(os.getenv("IMPORTANCE_THRESHOLD") or "3")

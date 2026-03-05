@@ -1,5 +1,4 @@
 import feedparser
-import requests
 from typing import List, Dict, Optional
 from abc import ABC, abstractmethod
 from config import Config
@@ -14,6 +13,11 @@ class NewsItem:
     """News item data structure"""
 
     def __init__(self, title: str, content: str, url: str, published: str, source: str):
+        if not title or not title.strip():
+            raise ValueError("NewsItem title cannot be empty")
+        if not url or not url.strip():
+            raise ValueError("NewsItem url cannot be empty")
+
         self.title = title
         self.content = content
         self.url = url
@@ -66,8 +70,13 @@ class RSSSource(DataSource):
             if feed.bozo:
                 raise RetryableError(f"Failed to parse RSS feed: {feed.bozo_exception}")
 
+            if not feed.entries:
+                logger.warning(f"No entries found in RSS feed: {self.name}")
+                self._update_status(True)
+                return []
+
             news_items = []
-            for entry in feed.entries[:20]:  # Limit to 20 most recent
+            for entry in feed.entries[:Config.MAX_NEWS_PER_SOURCE]:
                 # Skip if already processed
                 if self.storage.is_news_processed(entry.link):
                     continue
@@ -80,6 +89,8 @@ class RSSSource(DataSource):
                     source=self.name,
                 )
                 news_items.append(news_item)
+                # Mark as processed immediately after adding
+                self.storage.mark_news_processed(entry.link)
 
             logger.info(f"Fetched {len(news_items)} new items from {self.name}")
             self._update_status(True)
