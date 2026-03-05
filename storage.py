@@ -317,3 +317,119 @@ class Storage:
         except sqlite3.Error as e:
             logger.error(f"Failed to get articles by date range: {e}")
             return []
+
+    def save_event(self, event: 'NewsEvent') -> bool:
+        """Save news event"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+
+                # Save event
+                cursor.execute('''
+                    INSERT OR REPLACE INTO news_events
+                    (event_id, main_title, event_summary, source_count,
+                     earliest_time, importance, hotness, timeliness, total_score)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    event.event_id,
+                    event.main_title,
+                    event.event_summary,
+                    event.source_count,
+                    event.earliest_time,
+                    event.importance,
+                    event.hotness,
+                    event.timeliness,
+                    event.total_score
+                ))
+
+                # Save event-news mappings
+                for item in event.news_items:
+                    cursor.execute('''
+                        INSERT INTO event_news_mapping (event_id, news_url)
+                        VALUES (?, ?)
+                    ''', (event.event_id, item.url))
+
+                conn.commit()
+                logger.info(f"Saved event: {event.event_id}")
+                return True
+
+        except sqlite3.Error as e:
+            logger.error(f"Failed to save event: {e}")
+            return False
+
+    def save_impact_analysis(self, analysis: 'ImpactAnalysis') -> bool:
+        """Save impact analysis"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+
+                # Delete existing analysis for this event
+                cursor.execute('DELETE FROM impact_analysis WHERE event_id = ?',
+                             (analysis.event_id,))
+
+                # Save new analysis
+                for dim_data in analysis.get_dimensions():
+                    cursor.execute('''
+                        INSERT INTO impact_analysis
+                        (event_id, dimension, impact_level, explanation)
+                        VALUES (?, ?, ?, ?)
+                    ''', (
+                        analysis.event_id,
+                        dim_data['dimension'],
+                        dim_data.get('impact_level', 'none'),
+                        dim_data.get('explanation', '')
+                    ))
+
+                conn.commit()
+                logger.info(f"Saved impact analysis for: {analysis.event_id}")
+                return True
+
+        except sqlite3.Error as e:
+            logger.error(f"Failed to save impact analysis: {e}")
+            return False
+
+    def save_article_with_event(self, article: Dict, event_id: str = None) -> int:
+        """Save article with optional event association"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO articles
+                    (title, content, source_url, importance, news_type,
+                     word_count, article_type, event_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    article['title'],
+                    article['content'],
+                    article.get('source_url'),
+                    article.get('importance'),
+                    article.get('news_type'),
+                    article.get('word_count'),
+                    article.get('article_type', 'quick_news'),
+                    event_id
+                ))
+                conn.commit()
+                article_id = cursor.lastrowid
+                logger.info(f"Saved article: {article['title']} (ID: {article_id})")
+                return article_id
+
+        except sqlite3.Error as e:
+            logger.error(f"Failed to save article: {e}")
+            self._backup_to_json(article)
+            raise RetryableError(f"Database write failed: {e}")
+
+    def get_top_events(self, limit: int = 10) -> List[Dict]:
+        """Get recent top events"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT * FROM news_events
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                ''', (limit,))
+                return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            logger.error(f"Failed to get top events: {e}")
+            return []
