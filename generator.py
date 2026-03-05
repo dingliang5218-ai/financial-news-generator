@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 from anthropic import Anthropic
 from config import Config
 from logger import Logger
@@ -128,6 +128,152 @@ class ContentGenerator:
                 "importance": analysis.importance,
                 "news_type": analysis.news_type,
                 "word_count": word_count,
+            }
+
+        except Exception as e:
+            if "rate_limit" in str(e).lower():
+                logger.warning("Claude API rate limit reached")
+                raise RetryableError(f"Rate limit: {e}")
+            else:
+                logger.error(f"Failed to generate deep analysis: {e}")
+                raise DegradableError(f"Generation failed: {e}")
+
+    @retry_with_backoff()
+    def generate_daily_summary(
+        self, top_events: List['NewsEvent'], analyses: Dict[str, 'ImpactAnalysis']
+    ) -> Dict:
+        """Generate daily summary article for top 3 events"""
+        try:
+            # Prepare events content
+            events_content = ""
+            for idx, event in enumerate(top_events, 1):
+                analysis = analyses.get(event.event_id)
+                events_content += f"\n\n事件{idx}：{event.main_title}\n"
+                events_content += f"摘要：{event.event_summary}\n"
+                events_content += f"来源数：{event.source_count}\n"
+
+                if analysis:
+                    events_content += "影响分析：\n"
+                    for dim_data in analysis.get_dimensions():
+                        if dim_data['impact_level'] != 'none':
+                            events_content += f"  - {dim_data['dimension']}: {dim_data['impact_level']} - {dim_data['explanation']}\n"
+
+            prompt = f"""请将今日三大财经要闻整合成一篇"今日财经要闻"汇总文章。
+
+今日要闻：
+{events_content}
+
+要求：
+- 字数：1500-2000字
+- 结构：
+  1. 开篇总览（200字）- 概述三大要闻和市场整体情绪
+  2. 要闻一（400-500字）- 事件概述 + 多维度影响分析
+  3. 要闻二（400-500字）
+  4. 要闻三（400-500字）
+  5. 综合点评（200-300字）- 三大新闻的关联性和投资启示
+- 语言专业、通俗易懂
+- 不要使用 markdown 格式
+
+请直接输出文章内容，包含标题。"""
+
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=4000,
+                timeout=30.0,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            content = response.content[0].text.strip()
+            word_count = len(content)
+
+            # Extract title (first line)
+            lines = content.split('\n', 1)
+            title = lines[0].strip()
+            article_content = lines[1].strip() if len(lines) > 1 else content
+
+            logger.info(f"Generated daily summary: {word_count} chars")
+
+            return {
+                'title': title,
+                'content': article_content,
+                'article_type': 'daily_summary',
+                'word_count': word_count,
+                'event_ids': [e.event_id for e in top_events]
+            }
+
+        except Exception as e:
+            if "rate_limit" in str(e).lower():
+                logger.warning("Claude API rate limit reached")
+                raise RetryableError(f"Rate limit: {e}")
+            else:
+                logger.error(f"Failed to generate daily summary: {e}")
+                raise DegradableError(f"Generation failed: {e}")
+
+    @retry_with_backoff()
+    def generate_deep_analysis_for_event(
+        self, event: 'NewsEvent', analysis: 'ImpactAnalysis'
+    ) -> Dict:
+        """Generate deep analysis article for important event"""
+        try:
+            # Prepare event content
+            event_content = f"""标题：{event.main_title}
+
+摘要：{event.event_summary}
+
+来源数量：{event.source_count}
+
+详细内容：
+"""
+            for item in event.news_items:
+                event_content += f"\n[{item.source}] {item.title}\n{item.content}\n"
+
+            # Prepare impact analysis
+            impact_content = "\n多维度影响分析：\n"
+            for dim_data in analysis.get_dimensions():
+                impact_content += f"- {dim_data['dimension']}: {dim_data['impact_level']} - {dim_data['explanation']}\n"
+
+            prompt = f"""请为这个重大财经事件撰写一篇深度分析文章。
+
+{event_content}
+
+{impact_content}
+
+要求：
+- 字数：1500-2500字
+- 结构：
+  1. 事件全景（300字）- 综合所有来源的报道，事件时间线
+  2. 背景分析（400字）- 历史背景、相关政策/数据
+  3. 多维度影响分析（600-800字）- 详细分析对各市场的影响
+  4. 未来展望（300-400字）- 短期影响预测、长期趋势判断、投资建议
+- 语言专业、深入浅出
+- 不要使用 markdown 格式
+
+请直接输出文章内容，包含标题。"""
+
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=5000,
+                timeout=30.0,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            content = response.content[0].text.strip()
+            word_count = len(content)
+
+            # Extract title
+            lines = content.split('\n', 1)
+            title = lines[0].strip()
+            article_content = lines[1].strip() if len(lines) > 1 else content
+
+            logger.info(f"Generated deep analysis for {event.main_title}: {word_count} chars")
+
+            return {
+                'title': title,
+                'content': article_content,
+                'article_type': 'deep_analysis',
+                'event_id': event.event_id,
+                'importance': event.importance,
+                'word_count': word_count
             }
 
         except Exception as e:
