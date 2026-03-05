@@ -3,14 +3,17 @@ from config import Config
 from logger import Logger
 from models import NewsEvent
 
-logger = Logger.get_logger("ranker")
+logger = Logger.get_logger('ranker')
 
 
 class NewsRanker:
     """News event ranker"""
 
     def __init__(
-        self, importance_weight=0.6, hotness_weight=0.3, timeliness_weight=0.1
+        self,
+        importance_weight=0.6,
+        hotness_weight=0.3,
+        timeliness_weight=0.1
     ):
         self.importance_weight = importance_weight
         self.hotness_weight = hotness_weight
@@ -35,11 +38,17 @@ class NewsRanker:
         # Calculate scores for all events
         for event in events:
             event.calculate_total_score(
-                self.importance_weight, self.hotness_weight, self.timeliness_weight
+                self.importance_weight,
+                self.hotness_weight,
+                self.timeliness_weight
             )
 
         # Sort by total score (descending)
-        sorted_events = sorted(events, key=lambda e: e.total_score, reverse=True)
+        sorted_events = sorted(
+            events,
+            key=lambda e: e.total_score,
+            reverse=True
+        )
 
         # Select top N
         top_events = sorted_events[:top_n]
