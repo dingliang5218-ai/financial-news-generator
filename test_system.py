@@ -259,3 +259,65 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+def test_aggregation_and_ranking():
+    """Test news aggregation and ranking"""
+    logger.info("\nTesting: Aggregation and Ranking")
+    
+    try:
+        from models import NewsEvent
+        from data_fetcher import NewsItem
+        from analyzer import NewsAnalysis
+        from aggregator import NewsAggregator
+        from ranker import NewsRanker
+        
+        # Test module loading
+        aggregator = NewsAggregator()
+        logger.info("  - Aggregation module loaded")
+        
+        ranker = NewsRanker()
+        logger.info("  - Ranking module loaded")
+        
+        logger.info("✓ Aggregation and Ranking test passed")
+        return True
+        
+    except Exception as e:
+        logger.error(f"  - Aggregation and Ranking test failed: {e}")
+        return False
+
+
+def test_impact_analysis():
+    """Test impact analysis"""
+    logger.info("\nTesting: Impact Analysis")
+    
+    try:
+        from impact_analyzer import ImpactAnalyzer
+        from models import ImpactAnalysis
+        
+        # Test module loading
+        analyzer = ImpactAnalyzer()
+        logger.info("  - Impact analyzer loaded")
+        
+        # Test ImpactAnalysis model
+        test_data = {
+            "global_economy": {"impact_level": "high", "explanation": "Test"},
+            "us_economy": {"impact_level": "medium", "explanation": "Test"},
+            "china_economy": {"impact_level": "low", "explanation": "Test"},
+            "us_stock": {"impact_level": "high", "explanation": "Test"},
+            "china_stock": {"impact_level": "medium", "explanation": "Test"},
+            "other_markets": {"impact_level": "low", "explanation": "Test"}
+        }
+        
+        analysis = ImpactAnalysis("test_event", test_data)
+        dimensions = analysis.get_dimensions()
+        
+        assert len(dimensions) == 6, "Should have 6 dimensions"
+        logger.info("  - Impact analysis model working")
+        
+        logger.info("✓ Impact Analysis test passed")
+        return True
+        
+    except Exception as e:
+        logger.error(f"  - Impact Analysis test failed: {e}")
+        return False
