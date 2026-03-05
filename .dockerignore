@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+data/
+logs/
+*.db
+*.db-journal
+
+# Git
+.git/
+.gitignore
+
+# Documentation (keep in image)
+# *.md
+
+# Environment
+.env
+.env.*
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Backup
+*.bak
+*.backup
+data/backups/
+
+# Temporary
+*.tmp
+*.temp
+.cache/
+
+# Large files
+*.log
+2026-*.txt
+installed-plugins-list.txt
