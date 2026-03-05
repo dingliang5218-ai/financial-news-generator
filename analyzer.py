@@ -1,6 +1,6 @@
 import json
 from typing import Dict, Optional
-from anthropic import Anthropic
+from anthropic import Anthropic, RateLimitError
 from config import Config
 from logger import Logger
 from error_handler import retry_with_backoff, RetryableError, DegradableError
@@ -39,6 +39,7 @@ class NewsAnalyzer:
     @retry_with_backoff()
     def analyze(self, news_item: NewsItem) -> Optional[NewsAnalysis]:
         """Analyze news importance and classification"""
+        content = ""  # Initialize to avoid UnboundLocalError
         try:
             prompt = f"""分析这条美国财经新闻的重要性：
 
@@ -63,16 +64,43 @@ class NewsAnalyzer:
                 model=self.model,
                 max_tokens=500,
                 messages=[{"role": "user", "content": prompt}],
+                timeout=30.0,  # Add timeout handling
             )
 
-            # Parse response
-            content = response.content[0].text
+            # Parse response with markdown cleanup
+            content = response.content[0].text.strip()
+
+            # Remove possible markdown code block markers
+            if content.startswith("```"):
+                lines = content.split("\n")
+                # Remove first line (```json or ```)
+                lines = lines[1:]
+                # Remove last line (```)
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                content = "\n".join(lines).strip()
+
             result = json.loads(content)
 
+            # Validate response fields
+            if "importance" not in result or "news_type" not in result or \
+               "is_breaking" not in result or "summary" not in result:
+                raise ValueError("Missing required fields in response")
+
+            # Validate importance is 1-5 integer
+            importance = result["importance"]
+            if not isinstance(importance, int) or importance < 1 or importance > 5:
+                raise ValueError(f"Invalid importance value: {importance}, must be integer 1-5")
+
+            # Validate is_breaking is boolean
+            is_breaking = result["is_breaking"]
+            if not isinstance(is_breaking, bool):
+                raise ValueError(f"Invalid is_breaking value: {is_breaking}, must be boolean")
+
             analysis = NewsAnalysis(
-                importance=result["importance"],
+                importance=importance,
                 news_type=result["news_type"],
-                is_breaking=result["is_breaking"],
+                is_breaking=is_breaking,
                 summary=result["summary"],
             )
 
@@ -83,9 +111,15 @@ class NewsAnalyzer:
 
             return analysis
 
+        except RateLimitError as e:
+            logger.warning("Claude API rate limit reached, will retry")
+            raise RetryableError(f"Rate limit: {e}")
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Claude response: {e}\nResponse: {content}")
             raise DegradableError(f"Invalid response format: {e}")
+        except ValueError as e:
+            logger.error(f"Response validation failed: {e}\nResponse: {content}")
+            raise DegradableError(f"Invalid response data: {e}")
         except Exception as e:
             if "rate_limit" in str(e).lower():
                 logger.warning("Claude API rate limit reached, will retry")
